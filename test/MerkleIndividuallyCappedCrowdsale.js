@@ -30,24 +30,23 @@ contract('MerkleIndividuallyCappedCrowdsale', function ([_, wallet1, wallet2, wa
     })
 
     const caps = {
-        [wallet1]: 100,
-        [wallet2]: 200,
-        [wallet3]: 300,
-        [wallet4]: 400,
-        [wallet5]: 500,
-        [wallet6]: 600,
+        [wallet1]: ether(10),
+        [wallet2]: ether(20),
+        [wallet3]: ether(30),
+        [wallet4]: ether(40),
+        [wallet5]: ether(50),
+        [wallet6]: ether(60),
     };
     const elements = Object.keys(caps).map(key => new Buffer(key.substr(2) + padLeft(caps[key].toString(16), 64, 0), 'hex'));
     let merkleTree = new MerkleTree(elements);
 
-    // const leaf = web3.sha3(elements[0]);
-    // const proof = merkleTree.getHexProof(elements[0]);
-    //console.log(caps);
-    //console.log('\elements =\n', elements);
-    //console.log('\nmerkleTree =\n', merkleTree);
-    //console.log('\nroot =', root);
-    //console.log('\nleaf =', leaf);
-    //console.log('\nproof =', proof);
+    // Output for README.md
+    const proof = merkleTree.getHexProof(elements[1]);
+    console.log(caps);
+    console.log('\nlements(hex) =\n', elements.map(e => e.toString('hex')));
+    console.log('\nlements(sha3) =\n', elements.map(e => web3.sha3(e.toString('hex'), { encoding: 'hex' })));
+    console.log('\nmerkleTree =\n', merkleTree);
+    console.log('\nproof =', proof);
 
     let crowdsale;
 
@@ -55,7 +54,7 @@ contract('MerkleIndividuallyCappedCrowdsale', function ([_, wallet1, wallet2, wa
         const token = await MintableToken.new();
         crowdsale = await MerkleIndividuallyCappedCrowdsale.new(1, _, token.address);
         await crowdsale.setCapsMerkleRoot(merkleTree.getHexRoot());
-        await token.mint(crowdsale.address, 1000000);
+        await token.mint(crowdsale.address, 1000000 * 10**18);
     })
 
     it('should reject calls on old method', async function() {
@@ -69,64 +68,64 @@ contract('MerkleIndividuallyCappedCrowdsale', function ([_, wallet1, wallet2, wa
     })
 
     it('should fail on wrong proofs', async function() {
-        await crowdsale.buyTokens(wallet1, 100, merkleTree.getHexProof(elements[1]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet2, 200, merkleTree.getHexProof(elements[2]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet3, 300, merkleTree.getHexProof(elements[3]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet4, 400, merkleTree.getHexProof(elements[4]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet5, 500, merkleTree.getHexProof(elements[0]), {value: 40}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet1, ether(10), merkleTree.getHexProof(elements[1]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet2, ether(20), merkleTree.getHexProof(elements[2]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet3, ether(30), merkleTree.getHexProof(elements[3]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet4, ether(40), merkleTree.getHexProof(elements[4]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet5, ether(50), merkleTree.getHexProof(elements[0]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
     })
 
     it('should fail on wrong caps', async function() {
-        await crowdsale.buyTokens(wallet1, 200, merkleTree.getHexProof(elements[0]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet2, 100, merkleTree.getHexProof(elements[1]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet3, 500, merkleTree.getHexProof(elements[2]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet4, 300, merkleTree.getHexProof(elements[3]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet5, 400, merkleTree.getHexProof(elements[4]), {value: 40}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet1, ether(20), merkleTree.getHexProof(elements[0]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet2, ether(10), merkleTree.getHexProof(elements[1]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet3, ether(50), merkleTree.getHexProof(elements[2]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet4, ether(30), merkleTree.getHexProof(elements[3]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet5, ether(40), merkleTree.getHexProof(elements[4]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
     })
 
     it('should fail on wrong wallets', async function() {
-        await crowdsale.buyTokens(wallet2, 100, merkleTree.getHexProof(elements[0]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet1, 200, merkleTree.getHexProof(elements[1]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet5, 300, merkleTree.getHexProof(elements[2]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet3, 400, merkleTree.getHexProof(elements[3]), {value: 40}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet4, 400, merkleTree.getHexProof(elements[4]), {value: 40}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet2, ether(10), merkleTree.getHexProof(elements[0]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet1, ether(20), merkleTree.getHexProof(elements[1]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet5, ether(30), merkleTree.getHexProof(elements[2]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet3, ether(40), merkleTree.getHexProof(elements[3]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet4, ether(50), merkleTree.getHexProof(elements[4]), {value: ether(4)}).should.be.rejectedWith(EVMRevert);
     })
 
     it('should work fine', async function() {
         // Wallet1
-        await crowdsale.buyTokens(wallet1, 100, merkleTree.getHexProof(elements[0]), {value: 101}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet1, 100, merkleTree.getHexProof(elements[0]), {value: 40}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet1, 100, merkleTree.getHexProof(elements[0]), {value: 61}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet1, 100, merkleTree.getHexProof(elements[0]), {value: 60}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet1, 100, merkleTree.getHexProof(elements[0]), {value: 1}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet1, ether(10), merkleTree.getHexProof(elements[0]), {value: ether(11)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet1, ether(10), merkleTree.getHexProof(elements[0]), {value: ether(4)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet1, ether(10), merkleTree.getHexProof(elements[0]), {value: ether(7)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet1, ether(10), merkleTree.getHexProof(elements[0]), {value: ether(6)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet1, ether(10), merkleTree.getHexProof(elements[0]), {value: ether(1)}).should.be.rejectedWith(EVMRevert);
 
         // Wallet2
-        await crowdsale.buyTokens(wallet2, 200, merkleTree.getHexProof(elements[1]), {value: 201}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet2, 200, merkleTree.getHexProof(elements[1]), {value: 40}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet2, 200, merkleTree.getHexProof(elements[1]), {value: 161}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet2, 200, merkleTree.getHexProof(elements[1]), {value: 160}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet2, 200, merkleTree.getHexProof(elements[1]), {value: 1}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet2, ether(20), merkleTree.getHexProof(elements[1]), {value: ether(21)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet2, ether(20), merkleTree.getHexProof(elements[1]), {value: ether(4)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet2, ether(20), merkleTree.getHexProof(elements[1]), {value: ether(17)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet2, ether(20), merkleTree.getHexProof(elements[1]), {value: ether(16)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet2, ether(20), merkleTree.getHexProof(elements[1]), {value: ether(1)}).should.be.rejectedWith(EVMRevert);
 
         // Wallet3
-        await crowdsale.buyTokens(wallet3, 300, merkleTree.getHexProof(elements[2]), {value: 301}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet3, 300, merkleTree.getHexProof(elements[2]), {value: 40}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet3, 300, merkleTree.getHexProof(elements[2]), {value: 261}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet3, 300, merkleTree.getHexProof(elements[2]), {value: 260}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet3, 300, merkleTree.getHexProof(elements[2]), {value: 1}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet3, ether(30), merkleTree.getHexProof(elements[2]), {value: ether(31)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet3, ether(30), merkleTree.getHexProof(elements[2]), {value: ether(4)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet3, ether(30), merkleTree.getHexProof(elements[2]), {value: ether(27)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet3, ether(30), merkleTree.getHexProof(elements[2]), {value: ether(26)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet3, ether(30), merkleTree.getHexProof(elements[2]), {value: ether(1)}).should.be.rejectedWith(EVMRevert);
 
         // Wallet4
-        await crowdsale.buyTokens(wallet4, 400, merkleTree.getHexProof(elements[3]), {value: 401}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet4, 400, merkleTree.getHexProof(elements[3]), {value: 40}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet4, 400, merkleTree.getHexProof(elements[3]), {value: 361}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet4, 400, merkleTree.getHexProof(elements[3]), {value: 360}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet4, 400, merkleTree.getHexProof(elements[3]), {value: 1}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet4, ether(40), merkleTree.getHexProof(elements[3]), {value: ether(41)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet4, ether(40), merkleTree.getHexProof(elements[3]), {value: ether(4)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet4, ether(40), merkleTree.getHexProof(elements[3]), {value: ether(37)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet4, ether(40), merkleTree.getHexProof(elements[3]), {value: ether(36)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet4, ether(40), merkleTree.getHexProof(elements[3]), {value: ether(1)}).should.be.rejectedWith(EVMRevert);
 
         // Wallet5
-        await crowdsale.buyTokens(wallet5, 500, merkleTree.getHexProof(elements[4]), {value: 501}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet5, 500, merkleTree.getHexProof(elements[4]), {value: 40}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet5, 500, merkleTree.getHexProof(elements[4]), {value: 461}).should.be.rejectedWith(EVMRevert);
-        await crowdsale.buyTokens(wallet5, 500, merkleTree.getHexProof(elements[4]), {value: 460}).should.be.fulfilled;
-        await crowdsale.buyTokens(wallet5, 500, merkleTree.getHexProof(elements[4]), {value: 1}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet5, ether(50), merkleTree.getHexProof(elements[4]), {value: ether(51)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet5, ether(50), merkleTree.getHexProof(elements[4]), {value: ether(4)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet5, ether(50), merkleTree.getHexProof(elements[4]), {value: ether(47)}).should.be.rejectedWith(EVMRevert);
+        await crowdsale.buyTokens(wallet5, ether(50), merkleTree.getHexProof(elements[4]), {value: ether(46)}).should.be.fulfilled;
+        await crowdsale.buyTokens(wallet5, ether(50), merkleTree.getHexProof(elements[4]), {value: ether(1)}).should.be.rejectedWith(EVMRevert);
     })
 
     /*
